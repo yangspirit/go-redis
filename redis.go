@@ -232,13 +232,6 @@ func (c *baseClient) initConn(ctx context.Context, cn *pool.Conn) error {
 	conn := newConn(ctx, c.opt, connPool)
 
 	_, err := conn.Pipelined(ctx, func(pipe Pipeliner) error {
-		// if c.opt.Password != "" {
-		// 	if c.opt.Username != "" {
-		// 		pipe.AuthACL(ctx, c.opt.Username, c.opt.Password)
-		// 	} else {
-		// 		pipe.Auth(ctx, c.opt.Password)
-		// 	}
-		// }
 		if password != "" {
 			if username != "" {
 				pipe.AuthACL(ctx, username, password)
