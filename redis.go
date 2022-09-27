@@ -217,7 +217,12 @@ func (c *baseClient) initConn(ctx context.Context, cn *pool.Conn) error {
 	}
 	cn.Inited = true
 
-	if c.opt.Password == "" &&
+	username, password := c.opt.Username, c.opt.Password
+	if c.opt.CredentialsProvider != nil {
+		username, password = c.opt.CredentialsProvider()
+	}
+
+	if password == "" &&
 		c.opt.DB == 0 &&
 		!c.opt.readOnly &&
 		c.opt.OnConnect == nil {
@@ -228,11 +233,11 @@ func (c *baseClient) initConn(ctx context.Context, cn *pool.Conn) error {
 	conn := newConn(ctx, c.opt, connPool)
 
 	_, err := conn.Pipelined(ctx, func(pipe Pipeliner) error {
-		if c.opt.Password != "" {
-			if c.opt.Username != "" {
-				pipe.AuthACL(ctx, c.opt.Username, c.opt.Password)
+		if password != "" {
+			if username != "" {
+				pipe.AuthACL(ctx, username, password)
 			} else {
-				pipe.Auth(ctx, c.opt.Password)
+				pipe.Auth(ctx, password)
 			}
 		}
 
@@ -663,26 +668,26 @@ func (c *Client) pubSub() *PubSub {
 // subscription may not be active immediately. To force the connection to wait,
 // you may call the Receive() method on the returned *PubSub like so:
 //
-//    sub := client.Subscribe(queryResp)
-//    iface, err := sub.Receive()
-//    if err != nil {
-//        // handle error
-//    }
+//	sub := client.Subscribe(queryResp)
+//	iface, err := sub.Receive()
+//	if err != nil {
+//	    // handle error
+//	}
 //
-//    // Should be *Subscription, but others are possible if other actions have been
-//    // taken on sub since it was created.
-//    switch iface.(type) {
-//    case *Subscription:
-//        // subscribe succeeded
-//    case *Message:
-//        // received first message
-//    case *Pong:
-//        // pong received
-//    default:
-//        // handle error
-//    }
+//	// Should be *Subscription, but others are possible if other actions have been
+//	// taken on sub since it was created.
+//	switch iface.(type) {
+//	case *Subscription:
+//	    // subscribe succeeded
+//	case *Message:
+//	    // received first message
+//	case *Pong:
+//	    // pong received
+//	default:
+//	    // handle error
+//	}
 //
-//    ch := sub.Channel()
+//	ch := sub.Channel()
 func (c *Client) Subscribe(ctx context.Context, channels ...string) *PubSub {
 	pubsub := c.pubSub()
 	if len(channels) > 0 {
